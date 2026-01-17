@@ -75,6 +75,7 @@ option(ENABLE_MANIFOLD "Enable Manifold." ON)
 option(CMAKE_REQUIRE_FIND_PACKAGE_Lib3MF "Require Lib3MF." ON)
 option(ALLOW_BUNDLED_HIDAPI "Allow usage of bundled HIDAPI library (Windows only)." OFF)
 option(ENABLE_PYTHON "Enable experimental Python Interpreter" OFF)
+option(ENABLE_MCP "Enable MCP (Model Context Protocol) server for AI agent integration" OFF)
 option(BUILD_SHARED_LIBS "Build shared library" OFF)
 include(CMakeDependentOption)
 cmake_dependent_option(APPLE_UNIX "Build OpenSCAD in Unix mode in MacOS X instead of an Apple Bundle" OFF "APPLE" OFF)
@@ -1120,6 +1121,14 @@ if(ENABLE_PYTHON)
 		    src/python/pyopenscad.cc
 		    src/python/pyfunctions.cc )
 	target_compile_definitions(OpenSCADLibInternal PUBLIC ENABLE_PYTHON)
+endif()
+
+if(ENABLE_MCP)
+	list(APPEND CORE_SOURCES
+		    src/mcp/MCPServer.cc
+		    src/mcp/MCPHandler.cc
+		    src/mcp/MCPTransport.cc)
+	target_compile_definitions(OpenSCADLibInternal PUBLIC ENABLE_MCP)
 endif()
 
 if(EXPERIMENTAL AND ENABLE_CGAL)

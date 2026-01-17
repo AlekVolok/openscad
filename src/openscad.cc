@@ -114,6 +114,10 @@
 #include "python/python_public.h"
 #endif
 
+#ifdef ENABLE_MCP
+#include "mcp/MCPServer.h"
+#endif
+
 namespace po = boost::program_options;
 namespace fs = std::filesystem;
 
@@ -923,6 +927,9 @@ int openscad_main(int argc, char **argv)
           ("trust-python", "Trust python")("python-module", po::value<std::string>(),
                                            "=module Call pip python module")
 #endif
+#ifdef ENABLE_MCP
+          ("mcp-server", "Run as MCP (Model Context Protocol) server for AI agent integration")
+#endif
     ;
 
 #ifdef ENABLE_GUI_TESTS
@@ -976,6 +983,13 @@ int openscad_main(int argc, char **argv)
     return pythonRunModule(applicationPath, vm[pymod].as<std::string>(), args);
   }
 #endif  // ifdef ENABLE_PYTHON
+
+#ifdef ENABLE_MCP
+  if (vm.count("mcp-server")) {
+    return openscad::mcp::runMCPServer();
+  }
+#endif  // ifdef ENABLE_MCP
+
   if (vm.count("quiet")) {
     OpenSCAD::quiet = true;
   }
