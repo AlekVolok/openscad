@@ -20,6 +20,7 @@
  */
 
 #include "MCPServer.h"
+#include "OpenSCADTools.h"
 #include <iostream>
 #include <csignal>
 
@@ -71,6 +72,10 @@ void MCPServer::stop() {
 
 int runMCPServer() {
   MCPServer server;
+
+  // Register OpenSCAD-specific tools
+  registerOpenSCADTools(server.handler());
+
   return server.run();
 }
 

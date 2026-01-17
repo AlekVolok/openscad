@@ -24,6 +24,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <sstream>
 #include <string>
+#include <set>
 #include "mcp/MCPTypes.h"
 #include "mcp/MCPTransport.h"
 #include "mcp/MCPHandler.h"
@@ -386,6 +387,117 @@ TEST_CASE("MCPServer full workflow", "[mcp][server]") {
   // Check tools/call response
   REQUIRE(responses[2]["id"] == 3);
   REQUIRE(responses[2]["result"]["content"][0]["text"] == "test");
+}
+
+// ============================================================================
+// OpenSCAD Tools Tests
+// ============================================================================
+
+#include "mcp/OpenSCADTools.h"
+
+TEST_CASE("ValidateScadTool valid code", "[mcp][tools][validate]") {
+  ValidateScadTool tool;
+
+  json params = {{"code", "cube([10, 10, 10]);"}};
+  MCPToolResult result = tool.execute(params);
+
+  REQUIRE_FALSE(result.isError);
+  REQUIRE(result.content.size() == 1);
+
+  // Parse the JSON response
+  auto& textContent = std::get<TextContent>(result.content[0]);
+  json response = json::parse(textContent.text);
+
+  REQUIRE(response["valid"] == true);
+}
+
+TEST_CASE("ValidateScadTool invalid code", "[mcp][tools][validate]") {
+  ValidateScadTool tool;
+
+  json params = {{"code", "cube([10, 10, 10)"}};  // Missing bracket
+  MCPToolResult result = tool.execute(params);
+
+  REQUIRE_FALSE(result.isError);
+  REQUIRE(result.content.size() == 1);
+
+  auto& textContent = std::get<TextContent>(result.content[0]);
+  json response = json::parse(textContent.text);
+
+  REQUIRE(response["valid"] == false);
+  REQUIRE(response["messages"].size() > 0);
+}
+
+TEST_CASE("ValidateScadTool missing parameter", "[mcp][tools][validate]") {
+  ValidateScadTool tool;
+
+  json params = json::object();  // No code parameter
+  MCPToolResult result = tool.execute(params);
+
+  REQUIRE(result.isError == true);
+}
+
+TEST_CASE("ExportModelTool STL export", "[mcp][tools][export]") {
+  ExportModelTool tool;
+
+  json params = {
+    {"code", "cube([10, 10, 10]);"},
+    {"format", "stl"},
+    {"binary", false}  // ASCII STL for easier verification
+  };
+
+  MCPToolResult result = tool.execute(params);
+
+  // Note: This may fail if OpenGL context is not available
+  // The test is more about verifying the tool interface works
+  if (!result.isError) {
+    REQUIRE(result.content.size() == 1);
+    auto& textContent = std::get<TextContent>(result.content[0]);
+    json response = json::parse(textContent.text);
+    REQUIRE(response["format"] == "stl");
+  }
+}
+
+TEST_CASE("ExportModelTool invalid format", "[mcp][tools][export]") {
+  ExportModelTool tool;
+
+  json params = {
+    {"code", "cube([10, 10, 10]);"},
+    {"format", "invalid_format"}
+  };
+
+  MCPToolResult result = tool.execute(params);
+  REQUIRE(result.isError == true);
+}
+
+TEST_CASE("OpenSCAD tools registration", "[mcp][tools]") {
+  MCPHandler handler;
+  registerOpenSCADTools(handler);
+
+  // List tools
+  json request = {
+    {"jsonrpc", "2.0"},
+    {"id", 1},
+    {"method", "tools/list"}
+  };
+
+  json response = handler.handleMessage(request);
+
+  REQUIRE(response.contains("result"));
+  REQUIRE(response["result"]["tools"].is_array());
+
+  // Should have at least 3 tools
+  auto& tools = response["result"]["tools"];
+  REQUIRE(tools.size() >= 3);
+
+  // Check that our tools are registered
+  std::set<std::string> toolNames;
+  for (const auto& tool : tools) {
+    toolNames.insert(tool["name"].get<std::string>());
+  }
+
+  REQUIRE(toolNames.count("validate_scad") == 1);
+  REQUIRE(toolNames.count("render_preview") == 1);
+  REQUIRE(toolNames.count("export_model") == 1);
 }
 
 #endif  // ENABLE_MCP

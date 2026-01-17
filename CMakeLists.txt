@@ -1127,7 +1127,8 @@ if(ENABLE_MCP)
 	list(APPEND CORE_SOURCES
 		    src/mcp/MCPServer.cc
 		    src/mcp/MCPHandler.cc
-		    src/mcp/MCPTransport.cc)
+		    src/mcp/MCPTransport.cc
+		    src/mcp/OpenSCADTools.cc)
 	target_compile_definitions(OpenSCADLibInternal PUBLIC ENABLE_MCP)
 endif()
 
